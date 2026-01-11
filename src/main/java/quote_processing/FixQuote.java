@@ -12,19 +12,25 @@ public class FixQuote {
 
 
 
-    // {
+    // {  Объем нужен для вычисления от дневного объема относительного объема в минутах и 5секундах
     // dayDate1:candle[4+1 volume], dayDate2:candle[4+1 volume] ...
     // }
-    static JSONObject getDayCandle(){
+    static JSONObject getDayCandle(String startDay,String endDay){
         JSONObject result = new JSONObject();
         List<String> days = readListStr("J:\\static_data_2\\PythonProjects\\MIX_2011_2025_days.txt");
         assert days != null;
+        boolean isStart = false;
         for(String day:days){
             String[] elementsDay = day.split(",");
+            if(!isStart){
+                if(elementsDay[0].equals(startDay)){isStart = true;} else continue;
+            }
+            if(elementsDay[0].equals(endDay))break;
             Integer[] candleDay = new Integer[5];
             for(int e=0; e<5; e++)candleDay[e]= Integer.parseInt(elementsDay[e+2]);
             result.put(elementsDay[0],candleDay);
             //System.out.println(Arrays.toString(candleDay));
+
         }
         return result;
     }
@@ -74,7 +80,7 @@ public class FixQuote {
     // {
     // dayDate+minuteDate: [12 elements [candle4,volume] ]
     // }
-    static JSONObject get5secCandle(){
+    static JSONObject get5secCandle(String startDay,String endDay){
         JSONObject result = new JSONObject();
         List<String> seconds5 = readListStr("J:\\static_data_2\\PythonProjects\\MIX_2011_2025_5sec.txt");
         assert seconds5 != null;
@@ -85,12 +91,22 @@ public class FixQuote {
         int maxTickers = 0;
         String keyMaxTickers = "";
         Integer[] beforeData5sec = new Integer[] {0,0,0,0,0};
+        boolean isStart = false;
         for(String sec5:seconds5){
             c++;
             //if(c==100)break;
             String[] elementsSec5 = sec5.split(",");
+            if(!isStart){
+                if(elementsSec5[0].equals(startDay)){isStart = true;} else continue;
+            }
+            if(elementsSec5[0].equals(endDay))break;
             String dayMinKey = elementsSec5[0]+elementsSec5[1].substring(0,4);
+
+
             if(!currentKey.equals(dayMinKey)){
+                boolean isLog = false;
+                if(currentKey.equals("201201131012"))isLog = true;
+
                 if(jsonObject5secInMinute!=null){
                     //System.out.println(currentKey+" "+jsonArray5secInMinute);
                     if(jsonArray5secInMinute.length()>maxTickers){
@@ -102,13 +118,14 @@ public class FixQuote {
                         for(int i=0; i<60; i+=5){
                            if(jsonObject5secInMinute.has(String.valueOf(i))){
                                beforeData5sec = (Integer[]) jsonObject5secInMinute.get(String.valueOf(i));
-                               jsonArray5secInMinute.put(beforeData5sec);
-                               //System.out.println(i+" "+ Arrays.toString(beforeData5sec));
+                               Integer[] input = beforeData5sec.clone();
+                               jsonArray5secInMinute.put(input);
+                               if(isLog)System.out.println(i+" "+ Arrays.toString(beforeData5sec));
                            }
                            else {
                                beforeData5sec[4] = 0;
                                jsonArray5secInMinute.put(beforeData5sec);
-                               //System.out.println("empty "+i+" "+ Arrays.toString(beforeData5sec));
+                               if(isLog)System.out.println("empty "+i+" "+ Arrays.toString(beforeData5sec));
                            }
                             //System.out.println(elementsSec5[1].substring(0,4)+i+" "+ Arrays.toString(beforeData5sec));
                         }
@@ -145,17 +162,23 @@ public class FixQuote {
     // 5secData:[12 elements [(candle 4 elements),volume] ]
     // }
     // ]
-    static JSONObject getDayMinCandles(){
+    static JSONObject getDayMinCandles(String startDay,String endDay){
         JSONObject result = new JSONObject();
         List<String> minutes = readListStr("J:\\static_data_2\\PythonProjects\\MIX_2011_2025_minutes.txt");
-        JSONObject sec5 = get5secCandle();
+        JSONObject sec5 = get5secCandle(startDay,endDay);
         assert minutes != null;
         String currentDay = "";
         JSONArray jsonArrayMinutesInDay = null;
         JSONObject jsonObjectMinutes = null;
         int c = 0;
+        boolean isStart = false;
         for(String minute:minutes){
             String[] elementsMinute = minute.split(",");
+            if(!isStart){
+                if(elementsMinute[0].equals(startDay)){isStart = true;} else continue;
+            }
+            if(elementsMinute[0].equals(endDay))break;
+
             if(!currentDay.equals(elementsMinute[0])){
 
                     if(jsonArrayMinutesInDay!=null){
@@ -197,17 +220,22 @@ public class FixQuote {
     // candleDay: [ candle day 4 elements + 1 volume ]
     // },...
     // ]
-    static JSONArray getArrayDays(){
+    static JSONArray getArrayDays(String startDay,String endDay){
         List<String> hours = readListStr("J:\\static_data_2\\PythonProjects\\MIX_2011_2025_hours.txt");
-        JSONObject days = getDayCandle();
+        JSONObject days = getDayCandle(startDay,endDay);
         assert hours != null;
         String currentDay = "";
         JSONArray jsonArrayDays = new JSONArray();
         JSONObject jsonObjectDay = null;
         JSONArray jsonArrayHoursInDay = null;
         int c = 0;
+        boolean isStart = false;
         for(String hour:hours){
             String[] elementsHour = hour.split(",");
+            if(!isStart){
+                if(elementsHour[0].equals(startDay)){isStart = true;} else continue;
+            }
+            if(elementsHour[0].equals(endDay))break;
             if(!currentDay.equals(elementsHour[0])){
                 // поместить накопившийся день в массив.
                 if(jsonObjectDay!=null){
@@ -223,10 +251,13 @@ public class FixQuote {
                     else System.out.println(currentDay+" candleDay null ");
 
                     jsonArrayDays.put(jsonObjectDay);
+
+
                 }
                 currentDay = elementsHour[0];
                 jsonObjectDay = new JSONObject();
                 jsonArrayHoursInDay = new JSONArray();
+
             }
 
             assert jsonArrayHoursInDay != null;
@@ -235,7 +266,7 @@ public class FixQuote {
             //System.out.println(Arrays.toString(candleHour));
             jsonArrayHoursInDay.put(candleHour);
         }
-        System.out.println("middle hours "+(c/jsonArrayDays.length()));
+        //System.out.println("middle hours "+(c/jsonArrayDays.length()));
         return jsonArrayDays;
     }
 
@@ -278,7 +309,7 @@ public class FixQuote {
 
               jsonObjectDay.put("hours",jsonArrayHoursInDayNEW);
           }
-            System.out.println("jsonArrayHoursInDay.length() "+jsonObjectDay.getJSONArray("hours").length());
+            //System.out.println("jsonArrayHoursInDay.length() "+jsonObjectDay.getJSONArray("hours").length());
         }
         System.out.println("days "+jsonArrayDays.length());
         return jsonArrayDays;
@@ -290,7 +321,7 @@ public class FixQuote {
         //alignmentHoursInDay(getArrayDays());
        // getDayCandle();
 
-        JSONObject min = getDayMinCandles();
+        //JSONObject min = getDayMinCandles();
         int a = 0;
         //20110930
         /*for (String key:min.keySet()){
