@@ -4,7 +4,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static utilities.ReadWrite.readListStr;
 
@@ -15,27 +17,36 @@ public class FixQuote {
     // {  Объем нужен для вычисления от дневного объема относительного объема в минутах и 5секундах
     // dayDate1:candle[4+1 volume], dayDate2:candle[4+1 volume] ...
     // }
-    static JSONObject getDayCandle(String startDay,String endDay){
+    static JSONObject getDayCandle(String startDay,String endDay,JSONObject getDayMinCandlesFilterExist){
         JSONObject result = new JSONObject();
         List<String> days = readListStr("J:\\static_data_2\\PythonProjects\\MIX_2011_2025_days.txt");
         assert days != null;
         boolean isStart = false;
+        Set<String> keyDayMinutes = null;
+        if(getDayMinCandlesFilterExist!=null)keyDayMinutes = getDayMinCandlesFilterExist.keySet();
+
+
         for(String day:days){
             String[] elementsDay = day.split(",");
             if(!isStart){
-                if(elementsDay[0].equals(startDay)){isStart = true;} else continue;
+                if(elementsDay[0].equals(startDay)||startDay.isEmpty()){isStart = true;} else continue;
             }
             if(elementsDay[0].equals(endDay))break;
+            // фильтр на наличие дней с минутами, которых может не быть если минут мало в дне
+            if(keyDayMinutes!=null)
+            if(!keyDayMinutes.contains(elementsDay[0]))continue;
+
             Integer[] candleDay = new Integer[5];
             for(int e=0; e<5; e++)candleDay[e]= Integer.parseInt(elementsDay[e+2]);
             result.put(elementsDay[0],candleDay);
             //System.out.println(Arrays.toString(candleDay));
 
         }
+        System.out.println("AMOUNT DAYS "+result.keySet().size());
         return result;
     }
 
-    static JSONObject getTickes(){
+    static JSONObject getTickes(String startDay,String endDay){
         JSONObject result = new JSONObject();
         List<String> tickes = readListStr("J:\\static_data_2\\PythonProjects\\MIX_2011_2025_tickes.txt");
         assert tickes != null;
@@ -44,11 +55,20 @@ public class FixQuote {
         int c = 0;
         int maxTickers = 0;
         String keyMaxTickers = "";
+        boolean isStart = false;
         for(String tick:tickes){
             c++;
             //if(c==100)break;
             String[] elementsTick = tick.split(",");
-            String dayMinKey = elementsTick[0]+elementsTick[1].substring(0,4);
+            //String dayMinKey = elementsTick[0]+elementsTick[1].substring(0,4);
+            String dayMinKey = elementsTick[0];
+
+            if(!isStart){
+                if(dayMinKey.equals(startDay)||startDay.isEmpty()){isStart = true;} else continue;
+            }
+            if(dayMinKey.equals(endDay))break;
+
+
             if(!currentKey.equals(dayMinKey)){
                 if(jsonArrayTickesInMinute!=null){
                     //System.out.println(currentKey+" "+jsonArrayTickesInMinute);
@@ -97,7 +117,7 @@ public class FixQuote {
             //if(c==100)break;
             String[] elementsSec5 = sec5.split(",");
             if(!isStart){
-                if(elementsSec5[0].equals(startDay)){isStart = true;} else continue;
+                if(elementsSec5[0].equals(startDay)||startDay.isEmpty()){isStart = true;} else continue;
             }
             if(elementsSec5[0].equals(endDay))break;
             String dayMinKey = elementsSec5[0]+elementsSec5[1].substring(0,4);
@@ -105,7 +125,7 @@ public class FixQuote {
 
             if(!currentKey.equals(dayMinKey)){
                 boolean isLog = false;
-                if(currentKey.equals("201201131012"))isLog = true;
+                //if(currentKey.equals("201201131012"))isLog = true;
 
                 if(jsonObject5secInMinute!=null){
                     //System.out.println(currentKey+" "+jsonArray5secInMinute);
@@ -163,6 +183,7 @@ public class FixQuote {
     // }
     // ]
     static JSONObject getDayMinCandles(String startDay,String endDay){
+        int MIN_AMOUNT_MINUTES_IN_DAY = 240;
         JSONObject result = new JSONObject();
         List<String> minutes = readListStr("J:\\static_data_2\\PythonProjects\\MIX_2011_2025_minutes.txt");
         JSONObject sec5 = get5secCandle(startDay,endDay);
@@ -175,7 +196,7 @@ public class FixQuote {
         for(String minute:minutes){
             String[] elementsMinute = minute.split(",");
             if(!isStart){
-                if(elementsMinute[0].equals(startDay)){isStart = true;} else continue;
+                if(elementsMinute[0].equals(startDay)||startDay.isEmpty()){isStart = true;} else continue;
             }
             if(elementsMinute[0].equals(endDay))break;
 
@@ -184,8 +205,7 @@ public class FixQuote {
                     if(jsonArrayMinutesInDay!=null){
                         //System.out.println("count minutes in day "+currentDay+"     "+jsonArrayMinutesInDay);
                         //jsonObjectMinutes.put()
-
-                        result.put(currentDay,jsonArrayMinutesInDay);
+                        if(jsonArrayMinutesInDay.length()>=MIN_AMOUNT_MINUTES_IN_DAY) result.put(currentDay,jsonArrayMinutesInDay);
                     }
 
                     currentDay = elementsMinute[0];
@@ -206,9 +226,12 @@ public class FixQuote {
                 JSONArray jsonArrayTickes = sec5.getJSONArray(dayMinKey);
                 //System.out.println(dayMinKey+"      "+jsonArrayTickes);
                 jsonObjectMinutes.put("5secData",jsonArrayTickes);
+
             } else System.out.println("NO 5sec dayMinKey "+dayMinKey);
             jsonArrayMinutesInDay.put(jsonObjectMinutes);
             }
+
+        System.out.println("AMOUNT DAYS WITH MINUTES "+result.keySet().size());
         return  result;
     }
 
@@ -220,14 +243,16 @@ public class FixQuote {
     // candleDay: [ candle day 4 elements + 1 volume ]
     // },...
     // ]
-    static JSONArray getArrayDays(String startDay,String endDay){
+    // Создание массива дней с добавлением часов
+    static JSONArray getArrayDays(String startDay,String endDay,JSONObject getDayMinCandlesFilterExist){
         List<String> hours = readListStr("J:\\static_data_2\\PythonProjects\\MIX_2011_2025_hours.txt");
-        JSONObject days = getDayCandle(startDay,endDay);
+        JSONObject days = getDayCandle(startDay,endDay,getDayMinCandlesFilterExist);
         assert hours != null;
         String currentDay = "";
         JSONArray jsonArrayDays = new JSONArray();
         JSONObject jsonObjectDay = null;
         JSONArray jsonArrayHoursInDay = null;
+        Set<String> setDays = days.keySet();
         int c = 0;
         boolean isStart = false;
         for(String hour:hours){
@@ -238,7 +263,7 @@ public class FixQuote {
             if(elementsHour[0].equals(endDay))break;
             if(!currentDay.equals(elementsHour[0])){
                 // поместить накопившийся день в массив.
-                if(jsonObjectDay!=null){
+                if(jsonObjectDay!=null&&setDays.contains(currentDay)){
                     c+=jsonArrayHoursInDay.length();
                     //System.out.println("count hours in day "+currentDay+"     "+jsonArrayHoursInDay.length());
                     jsonObjectDay.put("day",currentDay);
@@ -251,8 +276,6 @@ public class FixQuote {
                     else System.out.println(currentDay+" candleDay null ");
 
                     jsonArrayDays.put(jsonObjectDay);
-
-
                 }
                 currentDay = elementsHour[0];
                 jsonObjectDay = new JSONObject();
@@ -270,6 +293,7 @@ public class FixQuote {
         return jsonArrayDays;
     }
 
+    // выравнивание количество часов в днях, чтобы было одинаковое количество
     static JSONArray alignmentHoursInDay(JSONArray jsonArrayDays){
         for(int i=0; i<jsonArrayDays.length(); i++){
           JSONObject jsonObjectDay = jsonArrayDays.getJSONObject(i);
@@ -319,10 +343,26 @@ public class FixQuote {
         //fixHours();
         //getArrayDays();
         //alignmentHoursInDay(getArrayDays());
-       // getDayCandle();
-
-        //JSONObject min = getDayMinCandles();
+        getDayCandle("","",getDayMinCandles("",""));
         int a = 0;
+
+
+        /*JSONObject min = getDayMinCandles("","");
+        for(String key: min.keySet()){
+            JSONArray minutesInDay = min.getJSONArray(key);
+            if(minutesInDay.length()<180){ a++;
+                System.out.println("day "+key+" minutes :"+minutesInDay.length());
+            }
+
+        }
+        System.out.println("TOTAL "+a);*/
+
+        /*JSONObject ticks = getTickes("20120105","20121101");
+        JSONArray dayTick = ticks.getJSONArray("20120105");
+        for(int i=0; i< dayTick.length(); i++){
+            Integer[] r = (Integer[]) dayTick.get(i);
+            System.out.println(Arrays.toString(r));
+        }*/
         //20110930
         /*for (String key:min.keySet()){
             a++;
