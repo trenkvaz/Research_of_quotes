@@ -1,5 +1,6 @@
 package utilities;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -23,9 +24,19 @@ public class WriteReadJSON {
         }
     }
 
+    public static void writeArrayJSON(JSONArray settings, String name){
+        try {
+            OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(name));
+            settings.write(writer);
+            writer.close();
+        } catch (Exception e) {
+            System.out.println("writeJSON() "+e);
+        }
+    }
+
     public static JSONObject readJSON(String name){
         try {
-            return new JSONObject(new JSONTokener(new FileReader(pathToJSONData+name+".json")));
+            return new JSONObject(new JSONTokener(new FileReader(name)));
         } catch (Exception e) {
             System.out.println("writeJSON() "+e);
             return new JSONObject();

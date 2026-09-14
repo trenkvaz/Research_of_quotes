@@ -1,0 +1,32 @@
+ if(isWaitLimitPrice!=0){
+                    // цена отскочила до нужного уровня
+                    if(MAX_MOVE>=Math.abs(r[0])-INDENT_LIMIT_TRADE){
+                        // на пробой если больше нуля
+                        trade = r[0]>0? "long":"short";
+
+                        //System.out.println(trade+" level "+r[1]+" price "+price+" date:"+date);
+                        priceTrade = price;
+                        dateTrade = date;
+                        if(trade.equals("long"))Result.countLong++;
+                        else Result.countShort++;
+                        String output2 = date.substring(0, 4)+"-" + date.substring(4, 6)+"-" + date.substring(6, 8);
+                        outPutDateTrade = output2+" "+time.substring(0, 2)+":" + time.substring(2, 4)+":" + time.substring(4, 6);
+                        //System.out.println(outPutDateTrade);
+                        entryTimeStr = date+time;
+                        isWaitLimitPrice = 0;
+                    } else if(MAX_MOVE>=Math.abs(r[0])-INDENT_LIMIT_TRADE){}
+
+                }     // если цена дошла до целевого уровня включается ожидание лимитки
+                else if((MAX_MOVE==Math.abs(r[0]))
+
+                        &&r[1]!=0
+                        //уровень равен круглому
+                        &&r[1]%RANGE_LEVEL==0
+                ){
+
+                    isWaitLimitPrice = price - INDENT_LIMIT_TRADE; // это для лонга цена положительная(для удобства оперделения лонги или шорт)
+                    // но для лонга отскок вычитается, а для шорта прибавляется к цене
+                    if(r[0]<0)isWaitLimitPrice = (price + INDENT_LIMIT_TRADE)*-1;
+
+
+                }
