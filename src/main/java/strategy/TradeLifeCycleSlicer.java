@@ -12,40 +12,7 @@ import static utilities.WriteReadJSON.writeArrayJSON;
 public class TradeLifeCycleSlicer {
 
     // Обновленный класс сделки: теперь храним и цену входа, и цену выхода
-    public static class TradeSession {
-        public String entryTimeStr; // Напр: "20260501095932"
-        public String exitTimeStr;  // Напр: "20260501101545"
-        public int entryPrice;
-        public int exitPrice;    // ЦЕНА ВЫХОДА (Для точной фиксации)
-        public String typeTrade;
-        public int result;
-        public String outPutDateTrade;
 
-
-
-        public TradeSession(String entryTimeStr, String exitTimeStr, int entryPrice, int exitPrice,String typeTrade,int result,String outPutDateTrade) {
-            this.entryTimeStr = entryTimeStr;
-            this.exitTimeStr = exitTimeStr;
-            this.entryPrice = entryPrice;
-            this.exitPrice = exitPrice;
-            this.typeTrade = typeTrade;
-            this.result = result;
-            this.outPutDateTrade = outPutDateTrade;
-
-        }
-
-        @Override
-        public String toString() {
-            return "TradeSession{" +
-                    "entryTimeStr='" + entryTimeStr + '\'' +
-                    ", exitTimeStr='" + exitTimeStr + '\'' +
-                    ", entryPrice=" + entryPrice +
-                    ", exitPrice=" + exitPrice +
-                    ", typeTrade='" + typeTrade + '\'' +
-                  //  ", customComment='" + customComment + '\'' +
-                    '}';
-        }
-    }
 
     public static class MinuteBar {
         public long timestamp;
@@ -61,34 +28,42 @@ public class TradeLifeCycleSlicer {
         }
     }
 
-    public static void sliceTradeLifeCycle(List<String> rawPriceRows, List<TradeSession> myTrades) {
+    public static void sliceTradeLifeCycle(List<String> rawPriceRows,int[]arrayTicks, List<OneTrade> myTrades) {
         Map<String, MinuteBar> minutesMap = new TreeMap<>();
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
 
         // 1. Сборка стандартных минут (без вкрапления сделок)
-        for (String row : rawPriceRows) {
-            if (row == null || row.trim().isEmpty()) continue;
+        for (int i=0; i<arrayTicks.length; i+=3)
+        //for (String row : rawPriceRows)
+        {
+            /*if (row == null || row.trim().isEmpty()) continue;
             String[] parts = row.split(",");
-            if (parts.length < 5) continue;
+            if (parts.length < 5) continue;*/
+            String dateStr = String.valueOf(arrayTicks[i]);
+            String timeStr = String.valueOf(arrayTicks[i+1]);
+            if(timeStr.length()<6)timeStr="0"+timeStr;
+            int price = arrayTicks[i+2];
+            try {
 
-            String dateStr = parts[0];
-            String timeStr = parts[1];
-            int price = (int) (Double.parseDouble(parts[2])
-                    *100
-            );
 
-            String minuteKey = dateStr + timeStr.substring(0, 4);
 
-            minutesMap.computeIfAbsent(minuteKey, k -> {
-                LocalDateTime ldt = LocalDateTime.parse(minuteKey, timeFormatter);
-                return new MinuteBar(ldt.toEpochSecond(ZoneOffset.UTC), minuteKey);
-            });
+                String minuteKey = dateStr + timeStr.substring(0, 4);
 
-            MinuteBar bar = minutesMap.get(minuteKey);
-            if (bar.open == -1) bar.open = price;
-            if (price > bar.high) bar.high = price;
-            if (price < bar.low) bar.low = price;
-            bar.close = price;
+                minutesMap.computeIfAbsent(minuteKey, k -> {
+                    LocalDateTime ldt = LocalDateTime.parse(minuteKey, timeFormatter);
+                    return new MinuteBar(ldt.toEpochSecond(ZoneOffset.UTC), minuteKey);
+                });
+
+                MinuteBar bar = minutesMap.get(minuteKey);
+                if (bar.open == -1) bar.open = price;
+                if (price > bar.high) bar.high = price;
+                if (price < bar.low) bar.low = price;
+                bar.close = price;
+            } catch (Exception e) {
+                System.out.println("timeStr "+timeStr+" dateStr "+dateStr+" price "+price);
+                throw new RuntimeException(e);
+            }
+
         }
 
         List<MinuteBar> chronologicalBars = new ArrayList<>(minutesMap.values());
@@ -101,9 +76,9 @@ public class TradeLifeCycleSlicer {
         JSONArray windowsArray = new JSONArray();
 
         // 2. Нарезка независимых окон под каждую сделку
-        for (TradeSession trade : myTrades) {
-            String entryMinKey = trade.entryTimeStr.substring(0, 12);
-            String exitMinKey = trade.exitTimeStr.substring(0, 12);
+        for (OneTrade trade : myTrades) {
+            String entryMinKey = trade.entryDateTime().substring(0, 12);
+            String exitMinKey = trade.exitDateTime().substring(0, 12);
 
             if (indexMap.containsKey(entryMinKey) && indexMap.containsKey(exitMinKey)) {
                 int entryIdx = indexMap.get(entryMinKey);
@@ -128,11 +103,11 @@ public class TradeLifeCycleSlicer {
                 JSONObject tradeInfoObj = new JSONObject();
                 tradeInfoObj.put("entryPrice", trade.entryPrice);
                 tradeInfoObj.put("exitPrice", trade.exitPrice);
-                tradeInfoObj.put("entryTime", trade.entryTimeStr);
-                tradeInfoObj.put("exitTime", trade.exitTimeStr);
-                tradeInfoObj.put("typeTrade", trade.typeTrade); // Для расширений в будущем
+                tradeInfoObj.put("entryDateTime", trade.entryDateTime());
+                tradeInfoObj.put("exitDateTime", trade.exitDateTime());
+                tradeInfoObj.put("typeTrade", trade.getLongOrShortStr());
                 tradeInfoObj.put("result", trade.result);
-                tradeInfoObj.put("outPutDateTrade", trade.outPutDateTrade);
+                tradeInfoObj.put("outPutDateTrade", trade.getBeautyEntryDateTime());
                 tradeInfoObj.put("entryTimestamp", entryBar.timestamp);
 
                 // В. Собираем всё в один единый JSONObject для текущего кадра/окна
@@ -150,11 +125,11 @@ public class TradeLifeCycleSlicer {
 
 
         try {
-            writeArrayJSON(windowsArray,"J:\\static_data_2\\JavaProjects\\Research_of_quotes\\src\\main\\resources\\jsons_data\\test_trades_imoex\\priceSeriesArray_range.json");
+            writeArrayJSON(windowsArray,"J:\\static_data_2\\JavaProjects\\Research_of_quotes\\src\\main\\resources\\jsons_data\\test_trades_imoex_2019\\priceSeriesArray_range.json");
             System.out.println("[Успех] Сформирована чистая структура окон. Всего окон: " + windowsArray.length());
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+        }
 }
 

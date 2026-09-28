@@ -21,7 +21,7 @@ public class TestTradeIMOEX {
     static void runTicks(){
         Levels levels = new Levels();
         List<String> stringListTicks = readListStr(dok);
-        List<TradeLifeCycleSlicer.TradeSession> myTrades = new ArrayList<>();
+        List<OneTrade> myTrades = new ArrayList<>();
         String currentDay = "";
         int SIZE = stringListTicks.size();
         String currentMonth = "";
@@ -38,7 +38,7 @@ public class TestTradeIMOEX {
             int price = (int) (Double.parseDouble(data[2])
                     *100
             );
-            if(!data[0].substring(0,6).equals(currentMonth)){
+            /*if(!data[0].substring(0,6).equals(currentMonth)){
                 if (!currentMonth.isEmpty()){
                     levels.mainProcess(true,price,data[0],data[1]);//для завершения последней сделки в месяце
 
@@ -49,7 +49,7 @@ public class TestTradeIMOEX {
                     if(result>maxWin)maxWin= result;
                     System.out.println("DATE: "+data[0].substring(0,6));
                     Levels.total();
-                    //myTrades.addAll(Levels.myTrades);
+                    myTrades.addAll(Levels.myTrades);
                     //break;
 
                        if(result>0){
@@ -65,7 +65,7 @@ public class TestTradeIMOEX {
 
                 currentMonth = data[0].substring(0,6);
                 levels = new Levels();
-            }
+            }*/
 
             boolean isStartDay = false;
             if(!data[0].equals(currentDay)){
@@ -90,16 +90,20 @@ public class TestTradeIMOEX {
                 totalRes+=result;
                 medianMonth++;
                 Levels.total();
-                //myTrades.addAll(Levels.myTrades);
+                myTrades.addAll(Levels.myTrades);
             }
+
+            if (i==SIZE-2) System.out.println("size before end "+Levels.myTrades.size());
         }
         //Levels.total();
-        //System.out.println("myTrades "+myTrades.size());
-        //System.out.println(myTrades.get(0).toString());
+        System.out.println("myTrades "+myTrades.size());//22538
+        System.out.println(myTrades.get(0).toString());
+        System.out.println(myTrades.get(myTrades.size()-2).toString());
+        System.out.println(myTrades.get(myTrades.size()-1).toString());
         //myTrades.forEach(c-> System.out.println(c.toString()));
         //sliceTradeLifeCycle(stringListTicks, myTrades);
-        System.out.println("maxWin "+maxWin+" maxLose "+maxLose+" maxLoseStreak "+maxLoseStreak);
-        System.out.println("totalRes "+totalRes+" medianMonth "+(totalRes/medianMonth));
+       // System.out.println("maxWin "+maxWin+" maxLose "+maxLose+" maxLoseStreak "+maxLoseStreak);
+        //System.out.println("totalRes "+totalRes+" medianMonth "+(totalRes/medianMonth));
     }
 
 
@@ -131,7 +135,7 @@ public class TestTradeIMOEX {
         final int INDENT_LIMIT_TRADE = 100; // отступ на который ставится лимитка если дошло до нужного уровня, если на пробой
 
         Result result;
-        static List<TradeLifeCycleSlicer.TradeSession> myTrades;
+        static List<OneTrade> myTrades;
 
         public Levels(){
             result = new Result();
@@ -253,8 +257,7 @@ public class TestTradeIMOEX {
                     dateTrade = date;
                     if(trade.equals("long"))Result.countLong++;
                     else Result.countShort++;
-                    String output2 = date.substring(0, 4)+"-" + date.substring(4, 6)+"-" + date.substring(6, 8);
-                    outPutDateTrade = output2+" "+time.substring(0, 2)+":" + time.substring(2, 4)+":" + time.substring(4, 6);
+
                     //System.out.println(outPutDateTrade);
                     entryTimeStr = date+time;
                 }
@@ -306,9 +309,9 @@ public class TestTradeIMOEX {
                 }
 
                 if(isClose){
-                    TradeLifeCycleSlicer.TradeSession tradeSession = new TradeLifeCycleSlicer.TradeSession(entryTimeStr,date+time,priceTrade,price,trade,result,outPutDateTrade);
+                    //OneTrade tradeSession = new OneTrade(entryTimeStr,date+time,priceTrade,price,trade);
                     //System.out.println(tradeSession.toString());
-                    myTrades.add(tradeSession);
+                    //myTrades.add(tradeSession);
                     refreshLikeStartDay();
                 }
 
@@ -367,10 +370,10 @@ public class TestTradeIMOEX {
 
             Result.resultForceCloseEndTrade+=result+(-20);
             Result.countForceCloseEndTrade++;
-            TradeLifeCycleSlicer.TradeSession tradeSession = new TradeLifeCycleSlicer.TradeSession(entryTimeStr,beforeTime,priceTrade,beforePrice,trade,result,outPutDateTrade);
+            //OneTrade tradeSession = new OneTrade(entryTimeStr,beforeTime,priceTrade,beforePrice,trade);
             //System.out.println(tradeSession.toString());
 
-            myTrades.add(tradeSession);
+            //myTrades.add(tradeSession);
         }
 
 
@@ -474,6 +477,7 @@ public class TestTradeIMOEX {
         runTicks();
 
         //System.out.println(checkTimeForTrade("073001"));
-
+         int a =0;
+         boolean i = a==0?true:false;
     }
 }

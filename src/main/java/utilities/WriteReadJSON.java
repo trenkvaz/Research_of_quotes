@@ -3,11 +3,10 @@ package utilities;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import strategy.OneTrade;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
+import java.util.List;
 
 public class WriteReadJSON {
 
@@ -42,5 +41,7 @@ public class WriteReadJSON {
             return new JSONObject();
         }
     }
+
+
 
 }
